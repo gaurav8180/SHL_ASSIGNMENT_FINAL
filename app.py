@@ -4,13 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from main import recommend_assessments
 
-
-port = int(os.environ.get("PORT", 8002))
+# Use PORT from environment or default to 8000
+port = int(os.environ.get("PORT", 8000))
 app = FastAPI()
 
+# Configure CORS for Render deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # In production, specify your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,7 +22,11 @@ class JobRequest(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "SHL Backend is running!"}
+    return {"message": "SHL Backend is running!", "status": "healthy"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
@@ -31,25 +36,10 @@ async def favicon():
 async def recommend(request: JobRequest):
     """
     Assessment Recommendation Endpoint
-    
-    Accepts a job description or natural language query and returns 
-    recommended relevant assessments (5-10 recommendations).
-    
-    Response format:
-    {
-        "recommendations": [
-            {
-                "name": "Assessment Name",
-                "url": "https://www.shl.com/..."
-            },
-            ...
-        ]
-    }
     """
     try:
         recommendations = await recommend_assessments(request.job_description)
         
-        # Ensure we have at least 1 recommendation (assignment says minimum 1, but we aim for 5-10)
         if not recommendations:
             return {
                 "recommendations": [],
